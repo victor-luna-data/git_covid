@@ -1,0 +1,18 @@
+{
+	"name": "source_population",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "ls_population",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "Binary",
+		"typeProperties": {
+			"location": {
+				"type": "HttpServerLocation",
+				"relativeUrl": "indicator/SP.POP.TOTL?downloadformat=csv"
+			}
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

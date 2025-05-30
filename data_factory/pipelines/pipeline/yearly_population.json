@@ -1,0 +1,358 @@
+{
+	"name": "yearly_population",
+	"properties": {
+		"activities": [
+			{
+				"name": "Copy world population",
+				"type": "Copy",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "BinarySource",
+						"storeSettings": {
+							"type": "HttpReadSettings",
+							"requestMethod": "GET"
+						},
+						"formatSettings": {
+							"type": "BinaryReadSettings"
+						}
+					},
+					"sink": {
+						"type": "BinarySink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings"
+						}
+					},
+					"enableStaging": false
+				},
+				"inputs": [
+					{
+						"referenceName": "source_population",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "sink_population",
+						"type": "DatasetReference"
+					}
+				]
+			},
+			{
+				"name": "init_continue",
+				"type": "SetVariable",
+				"dependsOn": [],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "continue",
+					"value": true
+				}
+			},
+			{
+				"name": "init_batchsize",
+				"description": "",
+				"type": "SetVariable",
+				"dependsOn": [],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "batchsize",
+					"value": 9000
+				}
+			},
+			{
+				"name": "init_skip",
+				"type": "SetVariable",
+				"dependsOn": [],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "skip",
+					"value": 0
+				}
+			},
+			{
+				"name": "Until1",
+				"type": "Until",
+				"dependsOn": [
+					{
+						"activity": "init_continue",
+						"dependencyConditions": [
+							"Completed"
+						]
+					},
+					{
+						"activity": "init_batchsize",
+						"dependencyConditions": [
+							"Completed"
+						]
+					},
+					{
+						"activity": "init_skip",
+						"dependencyConditions": [
+							"Completed"
+						]
+					},
+					{
+						"activity": "init_batchNumber",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@not(variables('continue'))",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "Copy netherlands",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "JsonSource",
+									"storeSettings": {
+										"type": "HttpReadSettings",
+										"requestMethod": "GET"
+									},
+									"formatSettings": {
+										"type": "JsonReadSettings"
+									}
+								},
+								"sink": {
+									"type": "JsonSink",
+									"storeSettings": {
+										"type": "AzureBlobFSWriteSettings"
+									},
+									"formatSettings": {
+										"type": "JsonWriteSettings"
+									}
+								},
+								"enableStaging": false
+							},
+							"inputs": [
+								{
+									"referenceName": "source_netherlands",
+									"type": "DatasetReference",
+									"parameters": {
+										"relativeURL": {
+											"value": "@concat('?$top=',string(variables('batchsize')),'&$skip=',string(variables('skip')))",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "sink_netherlands",
+									"type": "DatasetReference",
+									"parameters": {
+										"filename": {
+											"value": "@concat('batch_',variables('batchNumber'),'.json')",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						},
+						{
+							"name": "If Continue",
+							"type": "IfCondition",
+							"dependsOn": [
+								{
+									"activity": "Copy netherlands",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@less(activity('Copy netherlands').output.dataRead,150 )",
+									"type": "Expression"
+								},
+								"ifFalseActivities": [
+									{
+										"name": "take last skip",
+										"description": "toma el ultimo skip que se usó, se usa en otra actividad para evitar errores de autollamado ",
+										"type": "SetVariable",
+										"dependsOn": [],
+										"policy": {
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"variableName": "var_incremento",
+											"value": {
+												"value": "@variables('skip')",
+												"type": "Expression"
+											}
+										}
+									},
+									{
+										"name": "update skip",
+										"type": "SetVariable",
+										"dependsOn": [
+											{
+												"activity": "take last skip",
+												"dependencyConditions": [
+													"Succeeded"
+												]
+											}
+										],
+										"policy": {
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"variableName": "skip",
+											"value": {
+												"value": "@add(variables('batchsize'),variables('var_incremento') )",
+												"type": "Expression"
+											}
+										}
+									},
+									{
+										"name": "take last batch number",
+										"description": "para el nombre del archivo que va a escribir",
+										"type": "SetVariable",
+										"dependsOn": [
+											{
+												"activity": "update skip",
+												"dependencyConditions": [
+													"Succeeded"
+												]
+											}
+										],
+										"policy": {
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"variableName": "var_batchNumber",
+											"value": {
+												"value": "@variables('batchNumber')",
+												"type": "Expression"
+											}
+										}
+									},
+									{
+										"name": "update batchNumber",
+										"type": "SetVariable",
+										"dependsOn": [
+											{
+												"activity": "take last batch number",
+												"dependencyConditions": [
+													"Succeeded"
+												]
+											}
+										],
+										"policy": {
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"variableName": "batchNumber",
+											"value": {
+												"value": "@add(variables('var_batchNumber'), 1)",
+												"type": "Expression"
+											}
+										}
+									}
+								],
+								"ifTrueActivities": [
+									{
+										"name": "update continue",
+										"type": "SetVariable",
+										"dependsOn": [],
+										"policy": {
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"variableName": "continue",
+											"value": false
+										}
+									}
+								]
+							}
+						}
+					],
+					"timeout": "0.12:00:00"
+				}
+			},
+			{
+				"name": "init_batchNumber",
+				"type": "SetVariable",
+				"dependsOn": [],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "batchNumber",
+					"value": 1
+				}
+			}
+		],
+		"variables": {
+			"skip": {
+				"type": "Integer"
+			},
+			"batchsize": {
+				"type": "Integer"
+			},
+			"continue": {
+				"type": "Boolean"
+			},
+			"var_incremento": {
+				"type": "Integer"
+			},
+			"batchNumber": {
+				"type": "Integer"
+			},
+			"var_batchNumber": {
+				"type": "Integer"
+			}
+		},
+		"annotations": [],
+		"lastPublishTime": "2025-05-12T04:30:54Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}
