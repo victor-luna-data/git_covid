@@ -3,6 +3,10 @@ Este repositorio es para almacenar lo referente al covid project realizado en az
 
 ![image](https://github.com/user-attachments/assets/192c8dca-c809-4e3f-af5f-53167fea7d73)
 
+# Muestra del reporte
+![image](https://github.com/user-attachments/assets/7684e1cb-9277-436f-90c1-4e4a2247b5bd)
+
+
 ### Uso de Datos
 - World Health Organization 2023 data.who.int, WHO Coronavirus (COVID-19) dashboard > Data [Dashboard]. https://data.who.int/dashboards/covid19/data
 - World Bank. (n.d.). Population data [API endpoint]. World Bank Open Data API. https://api.worldbank.org/v2/en/indicator/SP.POP.TOTL
